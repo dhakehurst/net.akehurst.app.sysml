@@ -21,7 +21,8 @@ import androidx.compose.ui.window.ComposeViewport
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
-    val app = SysmlApplication()
+    // the browser has no file system or git access, so projects are kept in memory (first cut)
+    val app = SysmlApplication(aiApiKey = null, supportsFileSystemStorage = false)
     ComposeViewport {
         app.content()
     }

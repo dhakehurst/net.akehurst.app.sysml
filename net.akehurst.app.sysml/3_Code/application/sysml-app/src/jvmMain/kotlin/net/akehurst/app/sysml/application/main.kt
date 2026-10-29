@@ -16,13 +16,22 @@
 
 package net.akehurst.app.sysml.application
 
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
 
 fun main() {
-    val app = SysmlApplication()
+    val app = SysmlApplication(
+        aiApiKey = System.getenv("ANTHROPIC_API_KEY"),
+        supportsFileSystemStorage = true
+    )
     application {
-        Window(onCloseRequest = ::exitApplication, title = "SysML Application") {
+        Window(
+            onCloseRequest = ::exitApplication,
+            title = SysmlApplication.TITLE,
+            state = rememberWindowState(width = 1400.dp, height = 900.dp)
+        ) {
             app.content()
         }
     }

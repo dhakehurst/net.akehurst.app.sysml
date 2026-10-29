@@ -9,6 +9,7 @@ kotlin {
         commonMain {
             dependencies {
                 api(project(":user-api"))
+                api(libs.kotlinx.coroutines.core)
                 api(libs.compose.runtime)
                 api(libs.compose.foundation)
                 api(libs.compose.ui)
