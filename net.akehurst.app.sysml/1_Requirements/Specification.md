@@ -1,0 +1,107 @@
+# Requirement Specification
+
+The purpose of this specification is to define the requirements for the SysML v2 Application:
+an application in which a project is engineered according to a defined process, and in which
+an AI agent helps users write the SysML v2 text that results from following that process.
+
+Normative language
+- This document uses the keywords `SHALL` and `MAY` in accordance with RFC 2119. `SHALL` indicates a requirement and `MAY` indicates an option.
+
+Terms
+- `User`: a person who uses the application.
+- `Admin`: a user who administers the application.
+- `Project`: a body of engineering work, with its SysML v2 models, carried out according to an engineering process.
+- `Engineering process`: a defined sequence of steps that a project follows.
+- `Project template`, `Process template`, `Document template`: reusable definitions from which projects, processes and documents are created.
+- `Baseline`: a recorded state of a project's models at a point in time.
+
+## 1. General Requirements
+
+- [REQ-1.1] The application SHALL be available as a web version and a JVM version.
+- [REQ-1.2] The web and JVM versions SHALL be as identical as possible, in both functionality and user interface.
+  - [REQ-1.2.1] Functionality SHALL be implemented in shared (common) code, and platform-specific code SHALL be limited to what the platform requires.
+- [REQ-1.3] The overall approach SHALL be that a project is engineered according to an engineering process, and that an AI agent helps users write the SysML v2 text.
+
+## 2. Authentication
+
+### 2.1 Single sign on
+- [REQ-2.1.1] The application SHALL support single sign on (SSO).
+
+### 2.2 Login
+- [REQ-2.2.1] A user SHALL log in before accessing projects.
+- [REQ-2.2.2] A user SHALL be able to log out.
+
+## 3. Authorisation
+
+- [REQ-3.1] The application SHALL have an authorisation concept that controls what each user may do.
+- [REQ-3.2] The application SHALL distinguish admin users from other users.
+- [REQ-3.3] Administration of the application SHALL be restricted to admin users.
+  - [REQ-3.3.1] Admin authorisation SHALL apply to the web version.
+  - [REQ-3.3.2] Admin authorisation MAY apply to the JVM version.
+
+## 4. Administration
+
+- [REQ-4.1] An admin SHALL be able to define project templates.
+- [REQ-4.2] An admin SHALL be able to define engineering processes (process templates).
+- [REQ-4.3] An admin SHALL be able to define document templates.
+
+## 5. Projects
+
+- [REQ-5.1] A user SHALL be able to create a project.
+  - [REQ-5.1.1] A project MAY be created from a project template.
+- [REQ-5.2] A user SHALL be able to open and work on an existing project.
+- [REQ-5.3] Each project SHALL be engineered according to an engineering process.
+- [REQ-5.4] Each project SHALL contain SysML v2 models.
+
+## 6. Model storage
+
+- [REQ-6.1] SysML v2 models SHALL be stored as SysML v2 text.
+- [REQ-6.2] A project's SysML v2 models SHALL be stored in one of:
+  - [REQ-6.2.1] the local file system;
+  - [REQ-6.2.2] a git repository.
+
+## 7. Engineering processes
+
+- [REQ-7.1] An engineering process SHALL define the steps a project follows.
+- [REQ-7.2] The application SHALL help users follow a project's process through to completion.
+- [REQ-7.3] Following the process SHALL result in SysML v2 text being written.
+- [REQ-7.4] An engineering process SHALL define a strategy for the AI agent.
+
+## 8. AI agent
+
+- [REQ-8.1] The application SHALL provide an AI agent that helps users write SysML v2 text.
+- [REQ-8.2] The AI agent SHALL follow the strategy defined by the project's engineering process.
+- [REQ-8.3] The AI agent SHALL be implemented using Koog.
+
+## 9. Diagrams
+
+- [REQ-9.1] Diagrams SHALL be generated automatically from the SysML v2 models.
+- [REQ-9.2] Diagrams SHALL be laid out automatically.
+- [REQ-9.3] The content of a diagram SHALL be based on:
+  - [REQ-9.3.1] a selection of model elements;
+  - [REQ-9.3.2] a configuration of what is to be shown.
+- [REQ-9.4] A process template SHALL be able to include pre-selected diagrams.
+- [REQ-9.5] A project template SHALL be able to include pre-selected diagrams.
+
+## 10. Documents
+
+- [REQ-10.1] The application SHALL generate documents from a project's models, based on document templates.
+
+## 11. Baselines
+
+- [REQ-11.1] A user SHALL be able to set a baseline of a project at a point in time.
+- [REQ-11.2] A baseline, once set, SHALL remain retrievable.
+
+## 12. Open questions
+
+These are not yet decided. They are recorded here so they can become requirements later.
+
+- Which SSO providers or protocols must be supported (for example OpenID Connect, SAML)?
+- Is there a login other than SSO (for example local username and password), and does the JVM version need login at all?
+- Which roles exist besides admin (for example per-project roles such as owner, editor, viewer)?
+- When models are stored in git, is a baseline a git tag or commit? How are baselines recorded for local file system storage?
+- Who may set a baseline?
+- Which AI model providers must the Koog agent support, and is the agent allowed to change models directly or only suggest changes?
+- Which diagram kinds are required (for example SysML v2 standard views)?
+- Which document output formats are required (for example Markdown, HTML, PDF, Word)?
+- Where are templates and processes stored, and are they themselves written in SysML v2?
