@@ -1,3 +1,4 @@
+
 /**
  * Copyright (C) 2026 Dr. David H. Akehurst (http://dr.david.h.akehurst.net)
  *
@@ -23,11 +24,14 @@ repositories {
         content {
             includeGroupByRegex("net\\.akehurst.+")
         }
+        mavenContent {
+            snapshotsOnly()
+        }
     }
     mavenCentral()
+    google()
     gradlePluginPortal()
 }
 
 project.layout.buildDirectory = File(rootProject.projectDir, ".gradle-build/${project.name}")
-
 

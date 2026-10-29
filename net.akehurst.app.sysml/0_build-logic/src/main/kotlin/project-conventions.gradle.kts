@@ -1,6 +1,19 @@
-@file:OptIn(ExperimentalWasmDsl::class)
+/**
+ * Copyright (C) 2026 Dr. David H. Akehurst (http://dr.david.h.akehurst.net)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *         http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.time.ZoneId
@@ -10,16 +23,19 @@ plugins {
     alias(libs.plugins.dokka)
     alias(libs.plugins.buildconfig)
     signing
-    alias(libs.plugins.vanniktech.maven.publish) apply false
+    alias(libs.plugins.vanniktech.maven.publish)
 }
-val kotlin_languageVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_2
-val kotlin_apiVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_2
+val kotlin_languageVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_4
+val kotlin_apiVersion = org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_4
 val jvmTargetVersion = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
 
 repositories {
     mavenLocal {
-        content{
+        content {
             includeGroupByRegex("net\\.akehurst.+")
+        }
+        mavenContent {
+            snapshotsOnly()
         }
     }
     mavenCentral()
@@ -31,12 +47,20 @@ group = rootProject.name
 version = libs.versions.project.get()
 project.layout.buildDirectory = File(rootProject.projectDir, ".gradle-build/${project.name}")
 
+fun getProjectProperty(s: String) = project.findProperty(s) as String?
+
 buildConfig {
-    val now = Instant.now()
+    useKotlinOutput {
+        this.internalVisibility = false
+    }
+    // a real timestamp only when publishing, so normal builds stay up to date / cacheable
+    val isPublishing = gradle.startParameter.taskNames.any { it.contains("publish", ignoreCase = true) }
+    val now = if (isPublishing) Instant.now() else Instant.EPOCH
     fun fBbuildStamp(): String = DateTimeFormatter.ISO_DATE_TIME.withZone(ZoneId.of("UTC")).format(now)
     fun fBuildDate(): String = DateTimeFormatter.ofPattern("yyyy-MMM-dd").withZone(ZoneId.of("UTC")).format(now)
     fun fBuildTime(): String = DateTimeFormatter.ofPattern("HH:mm:ss z").withZone(ZoneId.of("UTC")).format(now)
 
+    packageName("${project.group}.${project.name.replace("-", ".")}")
     buildConfigField("String", "version", "\"${project.version}\"")
     buildConfigField("String", "buildStamp", "\"${fBbuildStamp()}\"")
     buildConfigField("String", "buildDate", "\"${fBuildDate()}\"")
@@ -67,6 +91,20 @@ kotlin {
                 }
             }
         }
+        // Window demos live in src/jvmDemo/kotlin: not in main (so not published) and not tests.
+        // Each module registers its own run<Name>Demo tasks.
+        if (project.file("src/jvmDemo").exists()) {
+            compilations.create("demo") {
+                associateWith(main)
+                compileTaskProvider.configure {
+                    compilerOptions {
+                        languageVersion.set(kotlin_languageVersion)
+                        apiVersion.set(kotlin_apiVersion)
+                        jvmTarget.set(jvmTargetVersion)
+                    }
+                }
+            }
+        }
     }
     js {
         binaries.library()
@@ -91,13 +129,13 @@ kotlin {
             implementation(kotlin("test-annotations-common"))
         }
         jvmTest.dependencies {
+            //implementation(libs.kotest.runner.junit5)
             implementation("org.junit.jupiter:junit-jupiter")
             runtimeOnly("org.junit.platform:junit-platform-launcher")
+            runtimeOnly("org.junit.jupiter:junit-jupiter-params")
         }
     }
 }
-
-
 
 tasks.named<Test>("jvmTest") {
     useJUnitPlatform()
@@ -115,19 +153,9 @@ tasks.named<Test>("jvmTest") {
     }
 }
 
+// publications, signing and the javadoc jar are configured by the vanniktech plugin (signAllPublications below)
 signing {
-    setRequired( {  gradle.taskGraph.hasTask("uploadArchives") })
     useGpgCmd()
-    val publishing = project.properties["publishing"] as PublishingExtension
-    sign(publishing.publications)
-}
-val signTasks = tasks.matching { it.name.matches(Regex("sign(.)+")) }.toTypedArray()
-tasks.forEach {
-    when {
-        it.name.matches(Regex("publish(.)+")) -> {
-            it.mustRunAfter(*signTasks)
-        }
-    }
 }
 
 mavenPublishing {
@@ -138,17 +166,20 @@ mavenPublishing {
     pom {
         name.set(project.name)
         description.set("A SysML Application")
+        url.set("https://github.com/dhakehurst/net.akehurst.app.sysml")
 
         licenses {
             license {
                 name.set("The Apache License, Version 2.0")
                 url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                distribution.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
             }
         }
         developers {
             developer {
                 name.set("Dr. David H. Akehurst")
                 email.set("dr.david.h@akehurst.net")
+                url.set("https://github.com/dhakehurst")
             }
         }
         scm {
