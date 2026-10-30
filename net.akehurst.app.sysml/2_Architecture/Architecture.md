@@ -38,4 +38,4 @@ Everything is in `commonMain`, except:
 | net.akehurst.kotlinx (collections, utils, logging-api, reflect) | 2.4.0-SNAPSHOT | mavenLocal |
 | net.akehurst.kotlin.compose (components, code-editor, layout-graph, layout-multipane) | 2.4.0-SNAPSHOT | mavenLocal |
 | net.akehurst.language agl-processor | 4.2.4.0-SNAPSHOT | mavenLocal, built from the `2.4.0-inwork` branch. The released 4.2.3.21 is built on kotlinx 2.3.21 and fails at runtime with kotlinx 2.4.0-SNAPSHOT |
-| net.akehurst.omg sysml-2_0-api, sysml-2_0-ram | 2.1.21-SNAPSHOT | mavenLocal |
+| net.akehurst.omg sysml-2_0-api, sysml-2_0-ram | 2.4.0-SNAPSHOT | mavenLocal, built from the `2.4.0-inwork` branch |
