@@ -73,7 +73,7 @@ object PromptBuilder {
 
     /** take the text of the first ```sysml (or plain ```) block, or the whole answer if there is none */
     fun extractSysml(answer: String): String {
-        val fence = Regex("```(?:sysml|SysML)?\\s*\\n(.*?)```", RegexOption.DOT_MATCHES_ALL)
+        val fence = Regex("```(?:sysml|SysML)?\\s*\\n([\\s\\S]*?)```")
         return fence.find(answer)?.groupValues?.get(1)?.trimEnd() ?: answer.trim()
     }
 }

@@ -21,7 +21,7 @@ import net.akehurst.app.sysml.api.Credentials
 import net.akehurst.app.sysml.api.NotAuthorisedException
 import net.akehurst.app.sysml.core.ai.PromptBuilder
 import net.akehurst.app.sysml.core.diagram.DiagramGenerator
-import net.akehurst.app.sysml.core.model.SysmlTextScanner
+import net.akehurst.app.sysml.core.language.AglSysmlModelReader
 import net.akehurst.app.sysml.info.*
 import kotlin.test.*
 
@@ -50,8 +50,8 @@ class CoreTest {
     """.trimIndent()
 
     @Test
-    fun scanner_finds_elements_types_and_relationships() {
-        val model = SysmlTextScanner().read(mapOf("vehicle.sysml" to vehicle))
+    fun reader_finds_elements_types_and_relationships() {
+        val model = AglSysmlModelReader().read(mapOf("vehicle.sysml" to vehicle))
         val engine = model.element("Vehicle::Engine")
         assertNotNull(engine)
         assertEquals("part def", engine.kind)
@@ -66,8 +66,31 @@ class CoreTest {
     }
 
     @Test
+    fun text_is_compiled_into_the_omg_metamodel() {
+        val model = AglSysmlModelReader().read(mapOf("vehicle.sysml" to vehicle))
+        assertEquals(emptyList(), model.issues)
+        val root = model.namespaces["vehicle.sysml"] as net.akehurst.omg.sysml.v2_0.api.KerML.Root.Namespaces.Namespace
+        val pkg = net.akehurst.app.sysml.core.language.OmgModel.ownedMembers(root).single()
+        assertTrue(pkg is net.akehurst.omg.sysml.v2_0.api.KerML.Kernel.Packages.Package)
+        assertEquals("Vehicle", pkg.name)
+        val engine = net.akehurst.app.sysml.core.language.OmgModel.ownedMembers(pkg).first { it.name == "Engine" }
+        assertTrue(engine is net.akehurst.omg.sysml.v2_0.api.SysML.Systems.Parts.PartDefinition)
+        val power = net.akehurst.app.sysml.core.language.OmgModel.ownedMembers(engine).first { it.name == "power" }
+        assertTrue(power is net.akehurst.omg.sysml.v2_0.api.SysML.Systems.Attributes.AttributeUsage)
+        assertEquals(listOf("Real"), net.akehurst.app.sysml.core.language.OmgModel.typeNames(power))
+    }
+
+    @Test
+    fun parse_problems_are_reported_with_their_position() {
+        val model = AglSysmlModelReader().read(mapOf("bad.sysml" to "package P {\n  part def ;\n  part x : ;\n}"))
+        assertTrue(model.issues.isNotEmpty())
+        assertEquals("bad.sysml", model.issues.first().file)
+        assertEquals(3, model.issues.first().line)
+    }
+
+    @Test
     fun diagram_is_generated_and_laid_out_without_overlaps() {
-        val model = SysmlTextScanner().read(mapOf("vehicle.sysml" to vehicle))
+        val model = AglSysmlModelReader().read(mapOf("vehicle.sysml" to vehicle))
         val def = DiagramDefinition("d", "Structure", ElementSelection(elementKinds = setOf("part def", "port def")))
         val diagram = DiagramGenerator().generate(def, model)
         assertEquals(setOf("Engine", "FuelPort", "Car", "Base", "Tank"), diagram.nodes.map { it.title }.toSet())

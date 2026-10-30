@@ -87,7 +87,7 @@ fun ProjectScreen(services: GuiServices, session: Session, project: Project, onP
         Box(Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
             when (tab) {
                 ProjectTab.PROCESS -> ProcessTab(services, session, project, files, canEdit, ::save)
-                ProjectTab.MODEL -> ModelTab(files, canEdit, ::save)
+                ProjectTab.MODEL -> ModelTab(files, model, canEdit, ::save)
                 ProjectTab.DIAGRAMS -> DiagramsTab(services, session, project, model, onProjectChanged)
                 ProjectTab.DOCUMENTS -> DocumentsTab(services, project, model, files)
                 ProjectTab.BASELINES -> BaselinesTab(services, session, project)
@@ -193,7 +193,7 @@ private fun ProcessTab(
 
 /** Edit the SysML v2 text directly. */
 @Composable
-private fun ModelTab(files: Map<String, String>, canEdit: Boolean, save: (String, String, String) -> Unit) {
+private fun ModelTab(files: Map<String, String>, model: SysmlModel, canEdit: Boolean, save: (String, String, String) -> Unit) {
     var selected by remember { mutableStateOf(files.keys.firstOrNull()) }
     var text by remember(selected, files) { mutableStateOf(selected?.let { files[it] } ?: "") }
     var newFile by remember { mutableStateOf("") }
@@ -211,6 +211,11 @@ private fun ModelTab(files: Map<String, String>, canEdit: Boolean, save: (String
                 selected = path
                 newFile = ""
             }) { Text("Add file") }
+            Spacer(Modifier.height(16.dp))
+            Text("Composition", fontWeight = FontWeight.Bold)
+            ModelTreeView(model, Modifier.fillMaxWidth().weight(1f)) { el ->
+                if (el.file.isNotEmpty()) selected = el.file
+            }
         }
     ) {
         val path = selected
@@ -222,6 +227,8 @@ private fun ModelTab(files: Map<String, String>, canEdit: Boolean, save: (String
                 Spacer(Modifier.weight(1f))
                 Button(enabled = canEdit && text != files[path], onClick = { save(path, text, "Edit $path") }) { Text("Save") }
             }
+            val issues = model.issues.filter { it.file == path }
+            issues.forEach { ErrorText("${it.line}:${it.column} ${it.message.lines().first()}") }
             CodeField("SysML v2", text, { if (canEdit) text = it }, Modifier.fillMaxSize(), minLines = 20)
         }
     }

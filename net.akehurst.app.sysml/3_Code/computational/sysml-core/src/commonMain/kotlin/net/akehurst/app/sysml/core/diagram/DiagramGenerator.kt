@@ -18,12 +18,14 @@ package net.akehurst.app.sysml.core.diagram
 
 import net.akehurst.app.sysml.api.DiagramService
 import net.akehurst.app.sysml.info.*
+import net.akehurst.kotlin.compose.layout.graph.EdgeRouting
+import net.akehurst.kotlin.compose.layout.graph.SugiyamaEdge
+import net.akehurst.kotlin.compose.layout.graph.SugiyamaLayout
 import kotlin.math.abs
-import kotlin.math.max
 
 /**
  * Generates diagrams from a selection of model elements and a view configuration, [REQ-9.1], [REQ-9.3]
- * and lays them out automatically with a simple layered layout. [REQ-9.2]
+ * and lays them out automatically with the SugiyamaLayout of net.akehurst.kotlin.compose layout-graph. [REQ-9.2]
  */
 class DiagramGenerator(
     val charWidth: Double = 7.0,
@@ -103,93 +105,42 @@ class DiagramGenerator(
 
     private fun layout(definition: DiagramDefinition, boxes: List<NodeBox>, edges: List<Edge>, direction: LayoutDirection): Diagram {
         if (boxes.isEmpty()) return Diagram(definition, emptyList(), emptyList(), 2 * margin, 2 * margin)
-        val names = boxes.map { it.element.qualifiedName }
-        // 'upper' end of each edge: the general element is above the specific one, the owner above the owned / typed
-        val down = edges.map { e ->
-            if (e.kind == RelationshipKind.SPECIALISATION || e.kind == RelationshipKind.SATISFY) e.target to e.source else e.source to e.target
-        }.filter { it.first != it.second }
-        val layer = assignLayers(names, down)
-        val layers = names.groupBy { layer[it] ?: 0 }.entries.sortedBy { it.key }.map { it.value.toMutableList() }
-        orderLayers(layers, down)
-
-        val box = boxes.associateBy { it.element.qualifiedName }
-        val positions = mutableMapOf<String, Pair<Double, Double>>()
-        var along = margin
-        var maxAcross = 0.0
+        // SugiyamaLayout lays out top to bottom, for left to right the width and height are swapped, and so are the resulting coordinates
         val horizontal = direction == LayoutDirection.TOP_TO_BOTTOM
-        for (l in layers) {
-            var across = margin
-            var depth = 0.0
-            for (n in l) {
-                val b = box[n]!!
-                positions[n] = if (horizontal) across to along else along to across
-                across += (if (horizontal) b.width else b.height) + nodeGap
-                depth = max(depth, if (horizontal) b.height else b.width)
-            }
-            maxAcross = max(maxAcross, across)
-            along += depth + layerGap
+        val box = boxes.associateBy { it.element.qualifiedName }
+        val sugiyama = SugiyamaLayout<String>(
+            nodeWidth = { n -> box[n]!!.let { if (horizontal) it.width else it.height } },
+            nodeHeight = { n -> box[n]!!.let { if (horizontal) it.height else it.width } },
+            layerSpacing = layerGap,
+            nodeSpacing = nodeGap,
+            edgeRouting = EdgeRouting.DIRECT
+        )
+        // the 'upper' end of each edge: the general element is above the specific one, the owner above the owned / typed
+        val layoutEdges = edges.mapIndexed { i, e ->
+            val reversed = e.kind == RelationshipKind.SPECIALISATION || e.kind == RelationshipKind.SATISFY
+            val le = if (reversed) SugiyamaEdge("e$i", e.target, e.source) else SugiyamaEdge("e$i", e.source, e.target)
+            Triple(e, le, reversed)
         }
-        // centre each layer
-        for (l in layers) {
-            val last = box[l.last()]!!
-            val end = positions[l.last()]!!.let { if (horizontal) it.first + last.width else it.second + last.height }
-            val shift = (maxAcross - nodeGap - end) / 2
-            l.forEach { n ->
-                val p = positions[n]!!
-                positions[n] = if (horizontal) (p.first + shift) to p.second else p.first to (p.second + shift)
-            }
-        }
+        val data = sugiyama.layoutGraph(boxes.map { it.element.qualifiedName }, layoutEdges.map { it.second })
+        fun point(p: Pair<Double, Double>) = if (horizontal) (p.first + margin) to (p.second + margin) else (p.second + margin) to (p.first + margin)
+
         val nodes = boxes.map { b ->
-            val p = positions[b.element.qualifiedName]!!
+            val p = point(data.nodePositions[b.element.qualifiedName] ?: (0.0 to 0.0))
             DiagramNode(b.element.qualifiedName, b.element.name, b.keyword, b.features, p.first, p.second, b.width, b.height)
         }
         val nodeByName = nodes.associateBy { it.elementQualifiedName }
-        val diagramEdges = edges.map { e ->
-            val s = nodeByName[e.source]!!
-            val t = nodeByName[e.target]!!
-            DiagramEdge(e.source, e.target, e.kind, listOf(borderPoint(s, t.centreX, t.centreY), borderPoint(t, s.centreX, s.centreY)))
+        val diagramEdges = layoutEdges.map { (e, le, reversed) ->
+            val route = data.edgeRoutes[le]?.map { point(it) }
+            val points = if (null == route || route.size < 2) {
+                val s = nodeByName[e.source]!!
+                val t = nodeByName[e.target]!!
+                listOf(borderPoint(s, t.centreX, t.centreY), borderPoint(t, s.centreX, s.centreY))
+            } else if (reversed) route.reversed() else route
+            DiagramEdge(e.source, e.target, e.kind, points)
         }
-        val width = nodes.maxOf { it.x + it.width } + margin
-        val height = nodes.maxOf { it.y + it.height } + margin
+        val width = maxOf(nodes.maxOf { it.x + it.width }, diagramEdges.flatMap { it.points }.maxOfOrNull { it.first } ?: 0.0) + margin
+        val height = maxOf(nodes.maxOf { it.y + it.height }, diagramEdges.flatMap { it.points }.maxOfOrNull { it.second } ?: 0.0) + margin
         return Diagram(definition, nodes, diagramEdges, width, height)
-    }
-
-    /** longest path layering, ignoring edges that would make a cycle */
-    private fun assignLayers(names: List<String>, down: List<Pair<String, String>>): Map<String, Int> {
-        val outgoing = down.groupBy({ it.first }, { it.second })
-        val layer = mutableMapOf<String, Int>()
-        val visiting = mutableSetOf<String>()
-        fun visit(n: String, depth: Int) {
-            if (n in visiting) return // cycle
-            if ((layer[n] ?: -1) >= depth) return
-            layer[n] = depth
-            visiting += n
-            outgoing[n]?.forEach { visit(it, depth + 1) }
-            visiting -= n
-        }
-        val hasIncoming = down.map { it.second }.toSet()
-        names.filter { it !in hasIncoming }.forEach { visit(it, 0) }
-        names.filter { it !in layer }.forEach { visit(it, 0) }
-        return layer
-    }
-
-    /** one down and one up pass of barycentre ordering, to reduce crossings */
-    private fun orderLayers(layers: List<MutableList<String>>, down: List<Pair<String, String>>) {
-        fun pass(indices: IntProgression, neighbours: (String) -> List<String>) {
-            for (i in indices) {
-                val ref = layers[i - indices.step.let { if (it > 0) 1 else -1 }]
-                val pos = ref.withIndex().associate { it.value to it.index.toDouble() }
-                val keyed = layers[i].withIndex().map { (idx, n) ->
-                    val ns = neighbours(n).mapNotNull { pos[it] }
-                    n to (if (ns.isEmpty()) idx.toDouble() else ns.average())
-                }
-                layers[i].clear()
-                layers[i].addAll(keyed.sortedBy { it.second }.map { it.first })
-            }
-        }
-        if (layers.size < 2) return
-        pass(1 until layers.size) { n -> down.filter { it.second == n }.map { it.first } }
-        pass(layers.size - 2 downTo 0) { n -> down.filter { it.first == n }.map { it.second } }
     }
 
     /** where the line from the centre of [n] towards (tx,ty) leaves the node's box */

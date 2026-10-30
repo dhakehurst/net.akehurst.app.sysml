@@ -17,12 +17,16 @@
 package net.akehurst.app.sysml.info
 
 /**
- * A light weight view of the elements in a project's SysML v2 text.
- * First cut: produced by a simple text scanner. To be replaced by the omg sysml model.
+ * A light weight view of the elements in a project's SysML v2 text, used for diagrams, documents and the tree view.
+ * It is derived from the omg SysML v2.0 metamodel ([namespaces]) that the text is compiled into.
  */
 data class SysmlModel(
     val elements: List<ModelElement>,
-    val relationships: List<ModelRelationship>
+    val relationships: List<ModelRelationship>,
+    /** problems found when reading the text */
+    val issues: List<ModelIssue> = emptyList(),
+    /** the root namespaces of the compiled omg SysML v2.0 model, one per file */
+    val namespaces: Map<String, Any> = emptyMap()
 ) {
     private val byQualifiedName = elements.associateBy { it.qualifiedName }
 
@@ -51,6 +55,14 @@ data class ModelElement(
 ) {
     val isDefinition: Boolean get() = kind.endsWith(" def")
 }
+
+/** a problem found when reading SysML v2 text, [REQ-6.6] */
+data class ModelIssue(
+    val file: String,
+    val line: Int,
+    val column: Int,
+    val message: String
+)
 
 enum class RelationshipKind {
     OWNERSHIP,

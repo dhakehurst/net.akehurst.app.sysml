@@ -1,0 +1,30 @@
+namespace net.akehurst.app.sysml.language
+
+// SysML v2.0 textual notation.
+// Derived from the KerML and SysML v2.0 textual BNF published by the OMG
+// (https://github.com/Systems-Modeling/SysML-v2-Release/tree/master/bnf),
+// in the style of the SysML v2_2023-11 grammar in the agl language-repository.
+// Assignments and semantic actions of the BNF are removed; [QualifiedName] references are plain QualifiedName.
+grammar SysMLv2_0 {
+
+    #defaultGoalRule: RootNamespace
+
+    // KerML 8.2.2.1 Line Terminators and White Space
+    skip leaf WHITE_SPACE = "\s+" ;
+
+    // KerML 8.2.2.2 Notes and Comments
+    skip leaf MULTILINE_NOTE = "//[*][^*]*[*]+(?:[^*/][^*]*[*]+)*/" ;
+    skip leaf SINGLE_LINE_NOTE = "//[^\n\r]*" ;
+    leaf REGULAR_COMMENT = "/[*][^*]*[*]+(?:[^*/][^*]*[*]+)*/" ;
+
+    // KerML 8.2.2.3 Names
+    NAME = BASIC_NAME | UNRESTRICTED_NAME ;
+    leaf BASIC_NAME = "[a-zA-Z_][0-9a-zA-Z_]*" ;
+    leaf UNRESTRICTED_NAME = "'([^'\\\\]|\\.)*'" ;
+
+    // KerML 8.2.2.4 Numeric Values
+    leaf DECIMAL_VALUE = "[0-9]+" ;
+    leaf EXPONENTIAL_VALUE = "[0-9]+[eE][+-]?[0-9]+" ;
+
+    // KerML 8.2.2.5 String Value
+    leaf STRING_VALUE = "\"(\\\\.|[^\"\\\\])*\"" ;

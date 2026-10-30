@@ -13,7 +13,7 @@ kotlinx-coroutines = "1.11.0"
 
 nak-kotlinx = "2.4.0-SNAPSHOT"
 nak-compose = "2.4.0-SNAPSHOT"
-nal-agl = "4.2.3.21"
+nal-agl = "4.2.4.0-SNAPSHOT"
 nao-omg = "2.1.21-SNAPSHOT"
 koog = "1.3.0"
 

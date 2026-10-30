@@ -21,7 +21,7 @@ import net.akehurst.app.sysml.core.admin.DefaultAdminService
 import net.akehurst.app.sysml.core.ai.KoogAiAssistant
 import net.akehurst.app.sysml.core.diagram.DiagramGenerator
 import net.akehurst.app.sysml.core.document.DocumentGenerator
-import net.akehurst.app.sysml.core.model.SysmlTextScanner
+import net.akehurst.app.sysml.core.language.AglSysmlModelReader
 import net.akehurst.app.sysml.core.project.DefaultBaselineService
 import net.akehurst.app.sysml.core.project.DefaultProcessService
 import net.akehurst.app.sysml.core.project.DefaultProjectService
@@ -47,7 +47,7 @@ class SysmlServices(
     val projects: ProjectService = DefaultProjectService(authorisation, admin, repositoryFactory)
     val process: ProcessService = DefaultProcessService(authorisation, admin)
     val baselines: BaselineService = DefaultBaselineService(authorisation, projects)
-    val modelReader: SysmlModelReader = SysmlTextScanner()
+    val modelReader: SysmlModelReader = AglSysmlModelReader()
     val diagrams: DiagramService = DiagramGenerator()
     val documents: DocumentService = DocumentGenerator(diagrams) { Clock.System.now().toString().substringBefore('T') }
     val ai: AiAssistant = KoogAiAssistant(aiApiKey)
